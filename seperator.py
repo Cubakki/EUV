@@ -108,7 +108,7 @@ class seperator:
                 element_atom_dict[element]=[1]
         second_line=""
         for element_ in list(element_atom_dict.keys()):
-            second_line+="{}{}".format(element_,len(element_atom_dict[element_]))
+            second_line+="{}{} ".format(element_,len(element_atom_dict[element_]))
         second_line=second_line.strip()
         head="{}\n{}\n".format(atom_num,second_line)
         return head+text
@@ -150,3 +150,4 @@ class seperator:
                     all_situation_list.append(self.cut(core_atom,associated_atom))
         for i in range(0,len(all_situation_list)):
             self.situation_write(all_situation_list[i][0],all_situation_list[i][1],str(i+1))
+        print("成功生成{}组core-ligand对于{}目录".format(i+1,self.out_path))
