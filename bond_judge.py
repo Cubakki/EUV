@@ -30,7 +30,7 @@ class bond_judge():
                     return True
             elif self.mode==2:
                 radius_sum=float(self.radius_dict[site1])+float(self.radius_dict[site2])
-                if radius_sum-0.6 <= distance <= radius_sum+0.6:
+                if radius_sum-0.60 <= distance <= radius_sum+0.60:
                     return True
             else:
                 raise Exception
