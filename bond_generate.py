@@ -1,7 +1,13 @@
 from bond_judge import bond_judge
 from pymatgen.core import Molecule
 
-def bond_generate(molecule : Molecule):
+def bond_generate(molecule : Molecule,mode=2):
+    '''
+
+    :param molecule:
+    :param mode: 1--经典键长,2--原子成键半径
+    :return: bond_dict
+    '''
     bond_dict={}
     distance_matrix=molecule.distance_matrix
     sites=molecule.sites
@@ -9,7 +15,7 @@ def bond_generate(molecule : Molecule):
     for site in sites:
         bond_dict[site.specie.name+str(used_ele[site.specie.name])]=[[],{}]
         used_ele[site.specie.name]+=1
-    judger=bond_judge()
+    judger=bond_judge(2)
     shape=distance_matrix.shape
     elements=list(bond_dict.keys())
     for m in range(0,shape[0]):

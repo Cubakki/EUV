@@ -25,5 +25,21 @@ def SRD101():
     #print(bond_dict)
     return bond_dict
 
+def CSD_radius():
+    '''
+    读取经典成键半径
+    :return: like {"H":"0.31"，"He"....}
+    '''
+    path="./bond_data/CSD_radius.txt"
+    element_radius_dict={}
+    with open(path,"r") as f:
+        chart=f.readlines()
+        f.close()
+    for i in chart[1:]:
+        block=i.split(" ")
+        element_radius_dict[block[1]]=block[2]
+    element_radius_dict["C"]="0.73"
+    return element_radius_dict
+
 if __name__=="__main__":
-    SRD101()
+    pass
