@@ -113,22 +113,35 @@ class seperator:
         head="{}\n{}\n".format(atom_num,second_line)
         return head+text
 
-    def situation_write(self,core_molecule_list,ligand_mocule_list,situation_name):
+    def cut_information_generator(self,core,ligand):
+        core_index=self.site_list.index(core)
+        ligand_index=self.site_list.index(ligand)
+        core_coor=self.molecule.sites[core_index].coords
+        ligand_coor=self.molecule.sites[ligand_index].coords
+        text="{} {} {} {}\n{} {} {} {}\n".format(core,core_coor[0],core_coor[1],core_coor[2],ligand,ligand_coor[0],ligand_coor[1],ligand_coor[2])
+        return text
+
+    def situation_write(self,core_molecule_list,ligand_mocule_list,situation_name,cut_information_text):
         '''
         输出一种core-ligand对至output_path下的situation_name文件夹
         :param core_molecule_list:
         :param ligand_mocule_list:
+        :param cut_information_text:断键信息文本，由cut_information_generator方法生成
         :return: True
         '''
         save_path=self.out_path+"/"+situation_name
         core_text=self.xyz_generator(core_molecule_list)
         ligand_text=self.xyz_generator(ligand_mocule_list)
-        os.mkdir(save_path)
+        if not path.exists(save_path):
+            os.mkdir(save_path)
         f=open(save_path+"/core.xyz","w")
         f.write(core_text)
         f.close()
         f=open(save_path+"/ligand.xyz","w")
         f.write(ligand_text)
+        f.close()
+        f=open(save_path+"/bond_cutoff.txt","w")
+        f.write(cut_information_text)
         f.close()
         return True
 
@@ -140,7 +153,7 @@ class seperator:
         :param ligand: eg:"C"
         :return: int(分离的组数)
         '''
-        all_situation_list=[]
+        all_situation_list=[];bond_cut_infor=[]
         if not (core in self.molecule.symbol_set) and (ligand in self.molecule.symbol_set):
             raise ValueError("指定的core或配体不存在于化合物中")
         #主循环，遍历core元素的原子的成键情况，分离配体；切断core-ligand键后，以ligand原子为起点做graph的遍历，分离出core和ligand两组粒子位置
@@ -148,6 +161,7 @@ class seperator:
             for associated_atom in self.bond_dict[core_atom][0]:
                 if re.findall("[^0-9]+",associated_atom)[0] == ligand:
                     all_situation_list.append(self.cut(core_atom,associated_atom))
+                    bond_cut_infor.append(self.cut_information_generator(core_atom,associated_atom))
         for i in range(0,len(all_situation_list)):
-            self.situation_write(all_situation_list[i][0],all_situation_list[i][1],str(i+1))
+            self.situation_write(all_situation_list[i][0],all_situation_list[i][1],str(i+1),bond_cut_infor[i])
         print("成功生成{}组core-ligand对于{}目录".format(i+1,self.out_path))
