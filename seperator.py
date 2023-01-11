@@ -89,7 +89,7 @@ class seperator:
     def xyz_generator(self,x_molecule_list):
         """
         situation_write的配套函数，生成.xyz文件格式的文本
-        :param x_molecule_list:
+        :param x_molecule_list:[index1,index2,...]
         :return: str
         """
         atom_num=0
@@ -113,6 +113,48 @@ class seperator:
         head="{}\n{}\n".format(atom_num,second_line)
         return head+text
 
+    def poscar_generator(self,x_molecule_list,lattice_vector,scale_factor=1):
+        '''
+        生成poscar格式文本，包含comment,scale_factor,lattice_vector,species_names,ions_per_species,ion_position
+        :param x_molecule_list:
+        :param lattice_vector:[[a1,b1,c1],[a2,b2,c2],[a3,b3,c3]]
+        :param scale_factor: 默认为1
+        :return: poscar_text
+        '''
+        element_atom_dict = {}
+
+        position_text = "Cartesian\n"
+        for index in x_molecule_list:
+            site = self.molecule.sites[index]
+            coordinate = site.coords
+            element=site.specie.name
+            line = "{} {} {}\n".format(coordinate[0], coordinate[1], coordinate[2])
+            position_text += line
+            try:
+                element_atom_dict[element].append(1)
+            except:
+                element_atom_dict[element] = [1]
+
+        comment_text="auto_:"
+        elements_text=""
+        elements_num=[]
+        for element_ in list(element_atom_dict.keys()):
+            comment_text+="{}{} ".format(element_,len(element_atom_dict[element_]))
+            elements_text+="{} ".format(element_)
+            elements_num.append(len(element_atom_dict[element_]))
+
+        specie_and_num_text="{}\n".format(elements_text)
+        for num in elements_num:
+            specie_and_num_text+="{} ".format(num)
+
+        lattice_text="{}\n".format(scale_factor)
+        for vector in lattice_vector:
+            lattice_text+="{} {} {}\n".format(vector[0],vector[1],vector[2])
+
+        poscar_text=comment_text+"\n"+lattice_text+specie_and_num_text+"\n"+position_text
+        return poscar_text
+
+
     def cut_information_generator(self,core,ligand):
         core_index=self.site_list.index(core)
         ligand_index=self.site_list.index(ligand)
@@ -121,32 +163,52 @@ class seperator:
         text="{} {} {} {}\n{} {} {} {}\n".format(core,core_coor[0],core_coor[1],core_coor[2],ligand,ligand_coor[0],ligand_coor[1],ligand_coor[2])
         return text
 
-    def situation_write(self,core_molecule_list,ligand_mocule_list,situation_name,cut_information_text):
+    def write(self,path,file):
+        f=open(path,"w")
+        f.write(file)
+        f.close()
+        return True
+
+    def situation_write(self,core_molecule_list,ligand_mocule_list,situation_name,cut_information_text,poscar=False,lattice_vector=None,scale_vector=1):
         '''
         输出一种core-ligand对至output_path下的situation_name文件夹
         :param core_molecule_list:
         :param ligand_mocule_list:
         :param cut_information_text:断键信息文本，由cut_information_generator方法生成
+        :param poscar:bool，此选项为True时同时输出POSCAR文件
+        :param lattice_vector: poscar=True时，要求晶格矢量
         :return: True
         '''
         save_path=self.out_path+"/"+situation_name
         core_text=self.xyz_generator(core_molecule_list)
         ligand_text=self.xyz_generator(ligand_mocule_list)
+        electron_num_text="core:{}\nligand:{}".format(self.electron_num(core_molecule_list),self.electron_num(ligand_mocule_list))
         if not path.exists(save_path):
             os.mkdir(save_path)
-        f=open(save_path+"/core.xyz","w")
-        f.write(core_text)
-        f.close()
-        f=open(save_path+"/ligand.xyz","w")
-        f.write(ligand_text)
-        f.close()
-        f=open(save_path+"/bond_cutoff.txt","w")
-        f.write(cut_information_text)
-        f.close()
+        self.write(save_path+"/core.xyz",core_text)
+        self.write(save_path + "/ligand.xyz", ligand_text)
+        self.write(save_path+"/bond_cutoff.txt",cut_information_text)
+        self.write(save_path+"/electron_num.txt",electron_num_text)
+        if poscar==True:
+            pos_core_text=self.poscar_generator(core_molecule_list,lattice_vector,scale_vector)
+            pos_ligand_text=self.poscar_generator(ligand_mocule_list,lattice_vector,scale_vector)
+            self.write(save_path + "/core.poscar",pos_core_text)
+            self.write(save_path + "/ligand.poscar",pos_ligand_text)
         return True
 
+    def electron_num(self,x_molecule_list):
+        """
+        生成结构的电子数 ***目前只适用于电中性情况
+        :param x_molecule_list:
+        :return: int
+        """
+        electron_sum=0
+        for index in x_molecule_list:
+            electron_sum+=self.molecule.sites[index].specie.number
+        return electron_sum
 
-    def run(self,core,ligand):
+
+    def run(self,core,ligand,poscar=False,lattice_vector=None,scale_vector=1):
         '''
         进行配体分离，每一种可能性都会输出core和ligand的xyz文件至output_path下的一个文件夹中
         :param core: eg:"Ti"
@@ -163,5 +225,5 @@ class seperator:
                     all_situation_list.append(self.cut(core_atom,associated_atom))
                     bond_cut_infor.append(self.cut_information_generator(core_atom,associated_atom))
         for i in range(0,len(all_situation_list)):
-            self.situation_write(all_situation_list[i][0],all_situation_list[i][1],str(i+1),bond_cut_infor[i])
+            self.situation_write(all_situation_list[i][0],all_situation_list[i][1],str(i+1),bond_cut_infor[i],poscar,lattice_vector,scale_vector)
         print("成功生成{}组core-ligand对于{}目录".format(i+1,self.out_path))
